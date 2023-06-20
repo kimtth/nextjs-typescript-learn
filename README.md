@@ -21,7 +21,7 @@ npm run dev
 
 ### Hello! Next.js
 
-<img src="docs/screen.png" width="400"/>
+<img src="docs/main_screen.png" width="400"/>
 
 ---
 
