@@ -1,4 +1,7 @@
 
+
+# Minimal chat user interface
+
 ## Begin Project 
 
 ### Start Next.js & Chakra UI
@@ -19,7 +22,9 @@ npm run dev
 √ Would you like to customize the default import alias? ... **No** / Yes
 ```
 
-### Hello! Next.js
+### Hello! Next.js 
+
+Access to `http://localhost:3000/chat`
 
 <img src="docs/main_screen.png" width="400"/>
 

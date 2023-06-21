@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Avatar, Flex, Text } from "@chakra-ui/react";
 
 interface Message {
+    id: string,
     from: string;
     text: string;
 }
@@ -27,11 +28,11 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
             {messages.map((item, index) => {
                 if (item.from === "me") {
                     return (
-                        <Flex key={index} w="100%" justify="flex-end">
+                        <Flex key={item.id} w="100%" justify="flex-end">
                             <Flex
                                 bg="blue.100"
                                 minW="100px"
-                                maxW="350px"
+                                maxW="450px"
                                 my="1"
                                 p="3"
                                 borderRadius="15px"
@@ -42,7 +43,7 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
                     );
                 } else {
                     return (
-                        <Flex key={index} w="100%">
+                        <Flex key={item.id} w="100%">
                             <Avatar
                                 name="Computer"
                                 src="./octocat.png"
@@ -52,7 +53,7 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
                                 bg="gray.100"
                                 color="black"
                                 minW="100px"
-                                maxW="350px"
+                                maxW="450px"
                                 my="1"
                                 p="3"
                                 borderRadius="15px"

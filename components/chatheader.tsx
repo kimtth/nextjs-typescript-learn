@@ -3,7 +3,7 @@ import { Flex, Avatar, AvatarBadge, Text } from "@chakra-ui/react";
 
 const ChatHeader = () => {
     return (
-        <Flex w="100%">
+        <Flex w="100%" ml={5}>
             <Avatar size="sm" name="Azure" src="./azure.png">
                 <AvatarBadge boxSize="1.25em" bg="green.500" />
             </Avatar>

@@ -12,11 +12,13 @@
     "@chakra-ui/react": "^2.7.0",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
+    "@types/uuid": "^9.0.2",
     "framer-motion": "^10.12.16",
     "next": "13.4.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-icons": "^4.9.0"
+    "react-icons": "^4.9.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "20.3.1",
