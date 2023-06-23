@@ -1,11 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Avatar, Flex, Text } from "@chakra-ui/react";
+import type { Message } from "../interfaces";
 
-interface Message {
-    id: string,
-    from: string;
-    text: string;
-}
 
 interface MessagesProps {
     messages: Message[];
@@ -26,7 +22,7 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
     return (
         <Flex w="100%" h="98%" overflowY="scroll" flexDirection="column" p="3">
             {messages.map((item, index) => {
-                if (item.from === "me") {
+                if (item.fromWho === "me") {
                     return (
                         <Flex key={item.id} w="100%" justify="flex-end">
                             <Flex

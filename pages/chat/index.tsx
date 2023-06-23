@@ -1,6 +1,5 @@
 import { Flex, Text, VStack, StackDivider, Button, FormControl, LinkBox, LinkOverlay, HStack, IconButton, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Spacer, useDisclosure, Box, Icon, Stack } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import Divider from "../../components/divider";
 import Footer from "../../components/footer";
 import ChatHeader from "../../components/chatheader";
@@ -9,96 +8,70 @@ import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import { FiSettings } from "react-icons/fi";
 import { HiChatAlt2 } from "react-icons/hi";
 import { RiKakaoTalkFill } from "react-icons/ri";
+import type { Message, Chat } from "../../interfaces";
+import { chatAllfetcher, chatAddMsg, chatCreate, chatDeleteById, chatUpdateById } from "../../interfaces/api";
+import useSWR from 'swr';
 
-interface Message {
-    id: string,
-    from: string,
-    text: string
-}
 
 const Chat = () => {
-    const [messages, setMessages] = useState([
-        { id: uuidv4(), from: "computer", text: "Hi, My Name is HoneyChat" },
-        { id: uuidv4(), from: "me", text: "Hey there" },
-        { id: uuidv4(), from: "me", text: "Myself Ferin Patel" },
-        {
-            id: uuidv4(),
-            from: "computer",
-            text: "Nice to meet you. You can send me message and i'll reply you with same message.",
-        },
-    ]);
-    const [chatrooms, setChatrooms] = useState([
-        {
-            id: uuidv4(), name: "Chat Room 1", messages: [
-                { id: uuidv4(), from: "computer", text: "Hi, My Name is LoLChat" },
-                { id: uuidv4(), from: "me", text: "Hey there" },
-                { id: uuidv4(), from: "me", text: "Myself macdonald kim" },
-                {
-                    id: uuidv4(),
-                    from: "computer",
-                    text: "Nice to meet you. You can send me message and i'll reply you with same message.",
-                },
-            ]
-        },
-        {
-            id: uuidv4(), name: "Chat Room 2", messages: [
-                { id: uuidv4(), from: "computer", text: "Hi, My Name is PoPoChat" },
-                { id: uuidv4(), from: "me", text: "Hey there" },
-                { id: uuidv4(), from: "me", text: "Myself ronot taxi" },
-                {
-                    id: uuidv4(),
-                    from: "computer",
-                    text: "Nice to meet you. You can send me message and i'll reply you with same message.",
-                },
-            ]
-        },
-        {
-            id: uuidv4(), name: "Chat Room 3", messages: [
-                { id: uuidv4(), from: "computer", text: "Hi, My Name is HoHoChat" },
-                { id: uuidv4(), from: "me", text: "Hey there" },
-                { id: uuidv4(), from: "me", text: "Myself super duper" },
-                {
-                    id: uuidv4(),
-                    from: "computer",
-                    text: "Nice to meet you. You can send me message and i'll reply you with same message.",
-                },
-            ]
-        },
-    ]);
-    const [targetChatRoomId, setTargetChatRoomId] = useState("");
+    const { data, error } = useSWR('/api/chat', chatAllfetcher)
+
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [chatrooms, setChatrooms] = useState<Chat[]>([]);
+    const uniqueId = () => Math.round(Date.now() * Math.random());
+
+    const [targetChatRoomId, setTargetChatRoomId] = useState(0);
     const [targetChatRoomName, setTargetChatRoomName] = useState("");
     const [initFlag, setInitFlag] = useState(false);
     const [inputMessage, setInputMessage] = useState("");
-    const [selectedChat, setSelectedChat] = useState(0);
+
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    const handleSendMessage = (targetChatRoomId: string) => {
+    useEffect(() => {
+        if (initFlag) {
+            setMessages([]);
+            setInitFlag(false);
+        }
+    }, [initFlag])
+
+    useEffect(() => {
+        setChatrooms(data);
+    }, [data])
+
+    if (error) return <div>failed to load</div>
+    if (!data) return <div>loading...</div>
+
+    const handleSendMessage = (targetChatRoomId: number) => {
         if (!inputMessage.trim().length) {
             return;
         }
         const data = inputMessage;
-        const newMessage = { id: uuidv4(), from: "me", text: data }
+        const newMessageMeId = uniqueId();
+        const newMessage = { chat_id: targetChatRoomId, id: newMessageMeId, fromWho: "me", text: data }
+
         setMessages((old) => [...old, newMessage]);
         setInputMessage("");
         handleUpdateMessagesInChatRooms(targetChatRoomId, newMessage);
 
+        const newMessageComId = uniqueId();
         setTimeout(() => {
-            const newBotMessage = { id: uuidv4(), from: "computer", text: data }
+            const newBotMessage = { chat_id: targetChatRoomId, id: newMessageComId, fromWho: "computer", text: data }
             setMessages((old) => [...old, newBotMessage]);
             handleUpdateMessagesInChatRooms(targetChatRoomId, newBotMessage);
         }, 1000);
     };
 
-    const handleUpdateMessagesInChatRooms = (targetChatRoomId: string, newMessage: Message) => {
+    const handleUpdateMessagesInChatRooms = (targetChatRoomId: number, newMessage: Message) => {
         setChatrooms((oldChatrooms) => {
             const updatedChatrooms = [...oldChatrooms];
             const index = updatedChatrooms.findIndex(chatroom => chatroom.id === targetChatRoomId);
+            console.log(targetChatRoomId);
 
             if (index != -1) {
                 updatedChatrooms[index] = {
                     ...updatedChatrooms[index],
                     messages: [
-                        ...updatedChatrooms[index].messages,
+                        ...updatedChatrooms[index].messages ?? [],
                         newMessage,
                     ],
                 };
@@ -106,27 +79,33 @@ const Chat = () => {
 
             return updatedChatrooms;
         });
+
+        chatAddMsg(targetChatRoomId, newMessage);
     }
 
     const handleAdd = () => {
         const timestamp = new Date().toLocaleString("ja-JP");
-        const targetChatRoomId = uuidv4();
-        const newChatRoom = { id: targetChatRoomId, name: `${timestamp}`, messages: [] };
+        const newChatRoomId = uniqueId();
+        const newChatRoom = { id: newChatRoomId, name: `${timestamp}` };
         setChatrooms((prevChatrooms) => [newChatRoom, ...prevChatrooms]);
 
-        setSelectedChat(0);
-        setTargetChatRoomId(targetChatRoomId);
+        setTargetChatRoomId(newChatRoomId);
+        chatCreate(newChatRoom);
 
-        const newMessage = { id: uuidv4(), from: "computer", text: `Hi! Chat ${timestamp}` }
+        const newMessage = { chat_id: newChatRoomId, id: 1, fromWho: "computer", text: `Hi! Chat ${timestamp}` }
         setMessages([newMessage]);
-        handleUpdateMessagesInChatRooms(targetChatRoomId, newMessage);
+        handleUpdateMessagesInChatRooms(newChatRoomId, newMessage);
     };
 
-    const handleEdit = (targetChatRoomId: string) => {
+    const handleEdit = (targetChatRoomId: number) => {
         onOpen();
         setTargetChatRoomId(targetChatRoomId);
         const chatRoom = chatrooms.find((chatroom) => chatroom.id === targetChatRoomId);
         setTargetChatRoomName(chatRoom ? chatRoom.name : "");
+
+        if(chatRoom){
+            chatUpdateById(targetChatRoomId, chatRoom);
+        }
     };
 
     const handleSave = () => {
@@ -136,35 +115,33 @@ const Chat = () => {
             )
         );
         onClose();
+
+        if(targetChatRoomName){
+            const updateChat = { id: targetChatRoomId, name: targetChatRoomName}
+            chatUpdateById(targetChatRoomId, updateChat);
+        }
         setTargetChatRoomName("");
     };
 
-    const handleDelete = (targetChatRoomId: string) => {
+    const handleDelete = (targetChatRoomId: number) => {
         if (confirm("Are you sure to delete?")) {
             setChatrooms((prevChatrooms) => {
-                console.log("sssss:", targetChatRoomId);
                 setInitFlag(true);
                 return prevChatrooms.filter((chatroom) => chatroom.id !== targetChatRoomId)
             });
+
+            chatDeleteById(targetChatRoomId);
         }
     }
 
-    const handleChatSelect = (index: number, targetChatRoomId: string) => {
-        setSelectedChat(index);
+    const handleChatSelect = (targetChatRoomId: number) => {
         if (targetChatRoomId) {
             setTargetChatRoomId(targetChatRoomId);
             const chatRoom = chatrooms.find((chatroom) => chatroom.id === targetChatRoomId);
-            setMessages(chatRoom ? chatRoom.messages : [])
+            // nullish coalescing operator (??) to provide a default value for the array if it is undefined. 
+            setMessages(chatRoom ? chatRoom.messages ?? [] : [])
         }
     };
-
-    useEffect(() => {
-        if (initFlag) {
-            setSelectedChat(-1);
-            setMessages([]);
-            setInitFlag(false);
-        }
-    }, [initFlag])
 
     return (
         <Flex w="100%" h="95vh" justify="center" align="center">
@@ -196,13 +173,13 @@ const Chat = () => {
                             />
                         </HStack>
                         {/* Chat Select Panel */}
-                        {chatrooms.map((rooms, index) => (
+                        {chatrooms?.map((rooms, index) => (
                             <HStack
                                 key={`h${rooms.id}`}
-                                onClick={() => handleChatSelect(index, rooms.id)}
+                                onClick={() => handleChatSelect(rooms.id)}
                                 style={{
                                     cursor: "pointer",
-                                    fontWeight: index === selectedChat ? "bold" : "normal",
+                                    fontWeight: rooms.id === targetChatRoomId ? "bold" : "normal",
                                 }}
                             >
                                 <IconButton
@@ -289,3 +266,5 @@ const Chat = () => {
 };
 
 export default Chat;
+
+

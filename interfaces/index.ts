@@ -4,11 +4,14 @@ export type User = {
 }
 
 export type Chat = {
-    id: string
-    name?: string
+    id: number
+    name: string
+    messages?: Message[]
 }
 
 export type Message = {
-    id: string
-    name?: string
+    chat_id: number
+    id: number
+    fromWho?: string
+    text?: string
 }
