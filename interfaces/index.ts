@@ -7,6 +7,8 @@ export type Chat = {
     id: number
     name: string
     messages?: Message[]
+    created_at?: Date
+    updated_at?: Date
 }
 
 export type Message = {
@@ -14,4 +16,6 @@ export type Message = {
     id: number
     fromWho?: string
     text?: string
+    created_at?: Date
+    updated_at?: Date
 }

@@ -103,7 +103,7 @@ const Chat = () => {
         const chatRoom = chatrooms.find((chatroom) => chatroom.id === targetChatRoomId);
         setTargetChatRoomName(chatRoom ? chatRoom.name : "");
 
-        if(chatRoom){
+        if (chatRoom) {
             chatUpdateById(targetChatRoomId, chatRoom);
         }
     };
@@ -116,8 +116,8 @@ const Chat = () => {
         );
         onClose();
 
-        if(targetChatRoomName){
-            const updateChat = { id: targetChatRoomId, name: targetChatRoomName}
+        if (targetChatRoomName) {
+            const updateChat = { id: targetChatRoomId, name: targetChatRoomName }
             chatUpdateById(targetChatRoomId, updateChat);
         }
         setTargetChatRoomName("");
@@ -139,7 +139,20 @@ const Chat = () => {
             setTargetChatRoomId(targetChatRoomId);
             const chatRoom = chatrooms.find((chatroom) => chatroom.id === targetChatRoomId);
             // nullish coalescing operator (??) to provide a default value for the array if it is undefined. 
-            setMessages(chatRoom ? chatRoom.messages ?? [] : [])
+            // setMessages(chatRoom ? chatRoom.messages?? [] : [])
+            const chatRoomMsgs = chatRoom?.messages;
+            if (chatRoomMsgs) {
+                const sortedChatRoomMsgs = chatRoomMsgs.sort((a: Message, b: Message) => {
+                    if (a.created_at && b.created_at) {
+                        const dateA = new Date(a.created_at);
+                        const dateB = new Date(b.created_at);
+                        return dateA.getTime() - dateB.getTime();
+                    } else {
+                        return 0
+                    }
+                });
+                setMessages(sortedChatRoomMsgs ? sortedChatRoomMsgs : [])
+            }
         }
     };
 
