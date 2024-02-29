@@ -22,7 +22,7 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
     return (
         <Flex w="100%" h="98%" overflowY="scroll" flexDirection="column" p="3">
             {messages.map((item, index) => {
-                if (item.fromWho === "me") {
+                if (item.from_who === "me") {
                     return (
                         <Flex key={item.id} w="100%" justify="flex-end">
                             <Flex
@@ -33,7 +33,7 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
                                 p="3"
                                 borderRadius="15px"
                             >
-                                <Text>{item.text}</Text>
+                                <Text>{item.msg}</Text>
                             </Flex>
                         </Flex>
                     );
@@ -54,7 +54,7 @@ const Messages: React.FC<MessagesProps> = ({ messages }) => {
                                 p="3"
                                 borderRadius="15px"
                             >
-                                <Text>{item.text}</Text>
+                                <Text>{item.msg}</Text>
                             </Flex>
                         </Flex>
                     );

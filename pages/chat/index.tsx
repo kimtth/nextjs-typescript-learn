@@ -1,5 +1,5 @@
-import { Flex, Text, VStack, StackDivider, Button, FormControl, LinkBox, LinkOverlay, HStack, IconButton, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Spacer, useDisclosure, Box, Icon, Stack } from "@chakra-ui/react";
-import React, { useEffect, useState } from "react";
+import { Flex, Text, VStack, StackDivider, Button, FormControl, HStack, IconButton, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Spacer, useDisclosure, Switch } from "@chakra-ui/react";
+import React, { ChangeEvent, useEffect, useState } from "react";
 import Divider from "../../components/divider";
 import Footer from "../../components/footer";
 import ChatHeader from "../../components/chatheader";
@@ -9,21 +9,25 @@ import { FiSettings } from "react-icons/fi";
 import { HiChatAlt2 } from "react-icons/hi";
 import { RiKakaoTalkFill } from "react-icons/ri";
 import type { Message, Chat } from "../../interfaces";
-import { chatAllfetcher, chatAddMsg, chatCreate, chatDeleteById, chatUpdateById } from "../../interfaces/api";
+import { Spinner } from '@chakra-ui/react'
+import { chatAllfetcher, chatGetMsgs, chatAddMsg, chatCreate, chatDeleteById, chatUpdateById, chatGetResponse } from "../../interfaces/api";
 import useSWR from 'swr';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const Chat = () => {
-    const { data, error } = useSWR('/api/chat', chatAllfetcher)
-
+    const { data, error } = useSWR('/api/chat', chatAllfetcher);
+    // add an alias to data and error
+    const [targetChatRoomId, setTargetChatRoomId] = useState("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [chatrooms, setChatrooms] = useState<Chat[]>([]);
-    const uniqueId = () => Math.round(Date.now() * Math.random());
+    // const uniqueId = () => Math.round(Date.now() * Math.random());
 
-    const [targetChatRoomId, setTargetChatRoomId] = useState(0);
     const [targetChatRoomName, setTargetChatRoomName] = useState("");
     const [initFlag, setInitFlag] = useState(false);
     const [inputMessage, setInputMessage] = useState("");
+    const [isInThinking, setIsInThinking] = useState(false);
+    const [isGPTmode, setIsGPTmode] = useState(false);
 
     const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -35,33 +39,59 @@ const Chat = () => {
     }, [initFlag])
 
     useEffect(() => {
-        setChatrooms(data);
+        console.log(data);
+        // error handling, if data is null, return empty array
+        if (data) {
+            if (data.length === 0) {
+                setChatrooms([]);
+            } else {
+                setChatrooms(data);
+                handleChatSelect(targetChatRoomId);
+            }
+        }
     }, [data])
 
     if (error) return <div>failed to load</div>
     if (!data) return <div>loading...</div>
 
-    const handleSendMessage = (targetChatRoomId: number) => {
+    const handleSendMessage = (targetChatRoomId: string) => {
         if (!inputMessage.trim().length) {
             return;
         }
-        const data = inputMessage;
-        const newMessageMeId = uniqueId();
-        const newMessage = { chat_id: targetChatRoomId, id: newMessageMeId, fromWho: "me", text: data }
+        setIsInThinking(true);
+        const newMessageMeId = uuidv4();
+        const newMessage = { chat_id: targetChatRoomId, id: newMessageMeId, from_who: "me", msg: inputMessage }
 
         setMessages((old) => [...old, newMessage]);
         setInputMessage("");
         handleUpdateMessagesInChatRooms(targetChatRoomId, newMessage);
 
-        const newMessageComId = uniqueId();
+        const newMessageComId = uuidv4();
         setTimeout(() => {
-            const newBotMessage = { chat_id: targetChatRoomId, id: newMessageComId, fromWho: "computer", text: data }
-            setMessages((old) => [...old, newBotMessage]);
-            handleUpdateMessagesInChatRooms(targetChatRoomId, newBotMessage);
-        }, 1000);
+            const botResponsePromise = chatGetResponse(targetChatRoomId, inputMessage, isGPTmode ? "gpt" : "work");
+            // get value from const botResponse: Promise<any>
+            botResponsePromise.then((botResponse) => {
+                console.log(botResponse);
+                const newBotMessage = { chat_id: targetChatRoomId, id: newMessageComId, from_who: "computer", msg: botResponse }
+                // Check if botResponse has status property and stauts is not 200
+                if (botResponse.hasOwnProperty('status') && botResponse.status !== 200) {
+                    alert("Error: " + botResponse.statusText);
+                    setIsInThinking(false);
+                    return;
+                }
+                setMessages((old) => [...old, newBotMessage]);
+                handleUpdateMessagesInChatRooms(targetChatRoomId, newBotMessage);
+                if(newBotMessage){
+                    setIsInThinking(false);
+                }
+            }).catch((error) => {
+                alert(error);
+                setIsInThinking(false);
+            });
+        }, 300);
     };
 
-    const handleUpdateMessagesInChatRooms = (targetChatRoomId: number, newMessage: Message) => {
+    const handleUpdateMessagesInChatRooms = (targetChatRoomId: string, newMessage: Message) => {
         setChatrooms((oldChatrooms) => {
             const updatedChatrooms = [...oldChatrooms];
             const index = updatedChatrooms.findIndex(chatroom => chatroom.id === targetChatRoomId);
@@ -85,19 +115,20 @@ const Chat = () => {
 
     const handleAdd = () => {
         const timestamp = new Date().toLocaleString("ja-JP");
-        const newChatRoomId = uniqueId();
+        const newChatRoomId = uuidv4();
         const newChatRoom = { id: newChatRoomId, name: `${timestamp}` };
         setChatrooms((prevChatrooms) => [newChatRoom, ...prevChatrooms]);
 
         setTargetChatRoomId(newChatRoomId);
         chatCreate(newChatRoom);
 
-        const newMessage = { chat_id: newChatRoomId, id: 1, fromWho: "computer", text: `Hi! Chat ${timestamp}` }
+        const newMessage = { chat_id: newChatRoomId, id: uuidv4(), from_who: "computer", msg: `Hi! Chat ${timestamp}` }
         setMessages([newMessage]);
         handleUpdateMessagesInChatRooms(newChatRoomId, newMessage);
+        setIsInThinking(false);
     };
 
-    const handleEdit = (targetChatRoomId: number) => {
+    const handleEdit = (targetChatRoomId: string) => {
         onOpen();
         setTargetChatRoomId(targetChatRoomId);
         const chatRoom = chatrooms.find((chatroom) => chatroom.id === targetChatRoomId);
@@ -123,7 +154,7 @@ const Chat = () => {
         setTargetChatRoomName("");
     };
 
-    const handleDelete = (targetChatRoomId: number) => {
+    const handleDelete = (targetChatRoomId: string) => {
         if (confirm("Are you sure to delete?")) {
             setChatrooms((prevChatrooms) => {
                 setInitFlag(true);
@@ -134,27 +165,30 @@ const Chat = () => {
         }
     }
 
-    const handleChatSelect = (targetChatRoomId: number) => {
-        if (targetChatRoomId) {
+    const handleChatSelect = async (targetChatRoomId: string) => {
+        console.log(targetChatRoomId);
+        if (targetChatRoomId !== null && targetChatRoomId !== undefined && targetChatRoomId.trim().length !== 0) {
             setTargetChatRoomId(targetChatRoomId);
-            const chatRoom = chatrooms.find((chatroom) => chatroom.id === targetChatRoomId);
-            // nullish coalescing operator (??) to provide a default value for the array if it is undefined. 
-            // setMessages(chatRoom ? chatRoom.messages?? [] : [])
-            const chatRoomMsgs = chatRoom?.messages;
-            if (chatRoomMsgs) {
-                const sortedChatRoomMsgs = chatRoomMsgs.sort((a: Message, b: Message) => {
+            const messages = await chatGetMsgs(targetChatRoomId);
+            console.log(messages);
+            if (messages) {
+                const sortedChatRoomMsgs = messages.sort((a: Message, b: Message) => {
                     if (a.created_at && b.created_at) {
                         const dateA = new Date(a.created_at);
                         const dateB = new Date(b.created_at);
                         return dateA.getTime() - dateB.getTime();
                     } else {
-                        return 0
+                        return 0;
                     }
                 });
-                setMessages(sortedChatRoomMsgs ? sortedChatRoomMsgs : [])
+                setMessages(sortedChatRoomMsgs ? sortedChatRoomMsgs : []);
             }
         }
     };
+
+    function handleMode(event: ChangeEvent<HTMLInputElement>): void {
+        setIsGPTmode(!isGPTmode);
+    }
 
     return (
         <Flex w="100%" h="95vh" justify="center" align="center">
@@ -186,7 +220,8 @@ const Chat = () => {
                             />
                         </HStack>
                         {/* Chat Select Panel */}
-                        {chatrooms?.map((rooms, index) => (
+                        {/* Uncaught TypeError: chatrooms.map is not a function */}
+                        {chatrooms?.map((rooms) => (
                             <HStack
                                 key={`h${rooms.id}`}
                                 onClick={() => handleChatSelect(rooms.id)}
@@ -267,6 +302,11 @@ const Chat = () => {
                     <Divider />
                     <Messages messages={messages} />
                     <Divider />
+                    { /* add a conditon for show and hide Flex area by isInThinking */}
+                    {isInThinking ?
+                        <Flex ml={2} bg='teal.50'><Spinner size='sm' color='blue.500' mr={2} label="Thinking ..." /><Text size='sm' as='b'>Thinking ...</Text></Flex>
+                        : ""}
+                    <Flex mt={2} mr={3} justifyContent="flex-end" align="center"><Text size='sm' as='b'>Generated by GPT</Text><Switch size='md' ml={2} isChecked={isGPTmode} onChange={handleMode}/></Flex>
                     <Footer
                         inputMessage={inputMessage}
                         setInputMessage={setInputMessage}

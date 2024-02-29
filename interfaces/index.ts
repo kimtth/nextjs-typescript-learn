@@ -1,21 +1,22 @@
 export type User = {
-    id: number
+    id: string
     name?: string
 }
 
 export type Chat = {
-    id: number
+    id: string
     name: string
+    prompt?: string
     messages?: Message[]
     created_at?: Date
     updated_at?: Date
 }
 
 export type Message = {
-    chat_id: number
-    id: number
-    fromWho?: string
-    text?: string
+    chat_id: string
+    id: string
+    from_who?: string
+    msg?: string
     created_at?: Date
     updated_at?: Date
 }

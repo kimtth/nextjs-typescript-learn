@@ -10,7 +10,7 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ inputMessage, setInputMessage, handleSendMessage }) => {
     return (
-        <Flex w="100%" mt="5">
+        <Flex w="100%" mt="2">
             <Input
                 placeholder="Type Something..."
                 borderRadius="2px"
